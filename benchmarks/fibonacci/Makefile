@@ -44,6 +44,7 @@ fibonacci-nodejs-image: Dockerfile nodejs/server.js
 	DOCKER_BUILDKIT=1 docker build \
 	--tag $(DOCKER_HUB_ACCOUNT)/fibonacci-nodejs:latest \
 	--target fibonacciNodeJS \
+	--no-cache \
 	-f ./Dockerfile \
 	$(ROOT)
 
@@ -51,6 +52,7 @@ fibonacci-go-image: Dockerfile go/server.go
 	DOCKER_BUILDKIT=1 docker build \
 	--tag $(DOCKER_HUB_ACCOUNT)/fibonacci-go:latest \
 	--target fibonacciGo \
+	--no-cache \
 	-f ./Dockerfile \
 	$(ROOT)
 

@@ -29,7 +29,7 @@ import argparse
 import grpc
 import string
 
-from proto.fibonacci import fibonacci_pb2
+import fibonacci_pb2
 import fibonacci_pb2_grpc
 
 import os
@@ -73,10 +73,8 @@ def fibonacci(num):
 class Greeter(fibonacci_pb2_grpc.GreeterServicer):
 
     def SayHello(self, request, context):
-
-        with tracing.Span("Run fibonacci"):
-            x = int(request.name)
-            y = fibonacci(x)
+        x = int(request.name)
+        y = fibonacci(x)
 
         gid = syscall(104)
         msg = "fn: Fib: y = fib(x) | x: %i y: %.1f | runtime: python" % (x,y)

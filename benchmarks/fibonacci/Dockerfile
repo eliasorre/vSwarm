@@ -27,19 +27,25 @@
 FROM vhiveease/python-slim:latest as fibonacciPythonBuilder
 WORKDIR /py
 COPY ./benchmarks/fibonacci/python/requirements.txt ./
-RUN pip3 install --user -r requirements.txt
 COPY ./utils/tracing/python/tracing.py ./
 COPY ./benchmarks/fibonacci/python/server.py ./
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/v0.3.0/proto/fibonacci/fibonacci_pb2_grpc.py ./
-ADD https://raw.githubusercontent.com/vhive-serverless/vSwarm-proto/v0.3.0/proto/fibonacci/fibonacci_pb2.py ./proto/fibonacci/
+COPY ./benchmarks/fibonacci/python/fibonacci_pb2.py ./
+COPY ./benchmarks/fibonacci/python/fibonacci_pb2_grpc.py ./
 
 # Second stage (Runner):
-FROM vhiveease/python-slim:latest as fibonacciPython
-COPY --from=fibonacciPythonBuilder /root/.local /root/.local
+FROM ubuntu:24.04 as fibonacciPython
 COPY --from=fibonacciPythonBuilder /py /app
 WORKDIR /app
+RUN apt-get -y update
+RUN apt-get -y install libb2-1
+COPY ./tools/pin/pin /pin
+COPY ./benchmarks/fibonacci/python/requirements.txt ./
+COPY ./tools/pythonNotModifed ./python
+RUN chmod +x -R ./python/bin
+RUN ./python/bin/python3.11 -m pip install -r requirements.txt
+RUN mkfifo /tmp/pinToolPipe
 # ENV PATH=/root/.local/bin:$PATH
-ENTRYPOINT [ "python", "/app/server.py" ]
+ENTRYPOINT [ "/pin/pin", "-t", "/pin/obj-intel64/champsim_tracer.so", "-o", "trace.champsim", "-t", "100000000", "-p", "1", "--" "/python/bin/python3.11", "/app/server.py" ]
 
 
 
