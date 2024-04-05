@@ -38,8 +38,6 @@ sys.path.insert(0, os.getcwd() + '/../../../../utils/storage/python')
 import tracing
 import videoservice_pb2_grpc
 import videoservice_pb2
-import destination as XDTdst
-import utils as XDTutil
 
 import io
 import grpc
@@ -124,43 +122,35 @@ class ObjectRecognitionServicer(videoservice_pb2_grpc.ObjectRecognitionServicer)
 
         # get the frame from s3 or inline
         frame = None
-        if self.transferType == S3:
-            log.info("retrieving target frame '%s' from s3" % request.s3key)
-            with tracing.Span("Frame fetch"):
-                frame = pickle.loads(storageBackend.get(request.s3key))
-        elif self.transferType == INLINE:
+        if self.transferType == INLINE:
             frame = request.frame
+        else:
+            log.error("Not INLINE")
 
         log.info("performing image recognition on frame")
+        pipe_path = "/tmp/pinToolPipe"
+        log.info("Starting pin")
+        with open(pipe_path, "w") as pipe:
+            pipe.write("start\n")
+        log.info("Stopped pin")
         classification = infer(preprocessImage(frame))
         log.info("object recogintion successful")
+        with open(pipe_path, "w") as pipe:
+            pipe.write("stop\n")
+        log.info("Stopped pin")
         return videoservice_pb2.RecogniseReply(classification=classification)
 
 def serve():
     transferType = os.getenv('TRANSFER_TYPE', INLINE)
-    if transferType == S3:
-        from storage import Storage
-        bucketName = os.getenv('BUCKET_NAME', 'vhive-video-bench')
-        global storageBackend
-        storageBackend = Storage(bucketName)
-    if transferType == S3 or transferType == INLINE:
+    if transferType == INLINE:
         max_workers = int(os.getenv("MAX_RECOG_SERVER_THREADS", 10))
         server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
         videoservice_pb2_grpc.add_ObjectRecognitionServicer_to_server(
             ObjectRecognitionServicer(transferType=transferType), server)
         server.add_insecure_port('[::]:'+args.sp)
+        print("Starting server!")
         server.start()
         server.wait_for_termination()
-    elif transferType == XDT:
-        config = XDTutil.loadConfig()
-        log.info("[recog] transfering via XDT")
-        log.info(config)
-
-        def handler(imageBytes):
-            classification = infer(preprocessImage(imageBytes))
-            return classification.encode(), True
-
-        XDTdst.StartDstServer(config, handler)
 
 
 if __name__ == '__main__':

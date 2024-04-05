@@ -38,8 +38,6 @@ import (
 
 	pb_video "tests/video_analytics/proto"
 
-	sdk "github.com/ease-lab/vhive-xdt/sdk/golang"
-	"github.com/ease-lab/vhive-xdt/utils"
 	pb_helloworld "github.com/vhive-serverless/vSwarm/examples/protobuf/helloworld"
 
 	storage "github.com/vhive-serverless/vSwarm/utils/storage/go"

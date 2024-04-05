@@ -28,10 +28,9 @@ services:
     # add host directory so you can write trace file to 
     #entrypoint: /bin/sh -c " /pin/pin -t /pin/tracer/obj-intel64/champsim_tracer.so -o trace.champsim -t 10000000 -p 1 -- /python/bin/python3.11 /app/server.py --addr=0.0.0.0 --port=50051"
     entrypoint:
-      - /app/python/bin/python3.11
-      - /app/server.py
-      - --addr=0.0.0.0
-      - --port=50051
+     - tail 
+     - -f
+     - /dev/null
     ports:
       - target: 50051
 

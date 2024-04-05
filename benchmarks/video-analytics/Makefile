@@ -34,7 +34,6 @@ decoder-image: Dockerfile proto/videoservice_pb2_grpc.py proto/videoservice_pb2.
 	DOCKER_BUILDKIT=1 docker build \
 	-t vhiveease/video-analytics-decoder:latest \
 	--target decode \
-	--secret id=GOPRIVATE_KEY \
 	-f Dockerfile \
 	$(ROOT)
 
@@ -42,7 +41,6 @@ recog-image: Dockerfile proto/videoservice_pb2_grpc.py proto/videoservice_pb2.py
 	DOCKER_BUILDKIT=1 docker build \
 	-t vhiveease/video-analytics-recog:latest \
 	--target recog \
-	--secret id=GOPRIVATE_KEY \
 	-f Dockerfile \
 	$(ROOT)
 
@@ -52,6 +50,7 @@ streaming-image: Dockerfile proto/videoservice_grpc.pb.go proto/videoservice.pb.
 	--target streaming \
 	--secret id=GOPRIVATE_KEY \
 	-f Dockerfile \
+	--no-cache \
 	$(ROOT)
 
 decoder-image-push: decoder-image

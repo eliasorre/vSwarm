@@ -73,11 +73,18 @@ def fibonacci(num):
 class Greeter(fibonacci_pb2_grpc.GreeterServicer):
 
     def SayHello(self, request, context):
+        pipe_path = "/tmp/pinToolPipe"
+        logging.info("Starting pin")
+        with open(pipe_path, "w") as pipe:
+            pipe.write("start\n")
+
         x = int(request.name)
         y = fibonacci(x)
 
         gid = syscall(104)
         msg = "fn: Fib: y = fib(x) | x: %i y: %.1f | runtime: python" % (x,y)
+        with open(pipe_path, "w") as pipe:
+            pipe.write("stop\n")
         return fibonacci_pb2.HelloReply(message=msg)
 
 

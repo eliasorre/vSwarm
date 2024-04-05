@@ -25,12 +25,17 @@ version: "3.7"
 services:
     recog:
         image: vhiveease/video-analytics-recog
-        command:
-            - -sp=50053
-            - -zipkin=http://zipkin:9411/api/v2/spans
+        entrypoint: 
+         - tail
+         - -f 
+         - /dev/null
+        #entrypoint: /bin/sh -c " /pin/pin -t /pin/tracer/obj-intel64/champsim_tracer.so -o trace.champsim -t 100000000 -p 1 -- /app/python/bin/python3.11 -u /app/recog.py -sp=5003 -zipkin=http://zipkin:9411/api/v2/spans"
+        # command:
+        #     - -sp=50053
+        #     - -zipkin=http://zipkin:9411/api/v2/spans
         environment:
             - MAX_RECOG_SERVER_THREADS=10
-            - TRANFER_TYYPE=INLINE
+            - TRANSFER_TYYPE=INLINE
 
     decoder:
         image: vhiveease/video-analytics-decoder
@@ -42,7 +47,7 @@ services:
         environment:
             - MAX_DECODER_SERVER_THREADS=10
             - CONCURRENT_RECOG=false
-            - TRANFER_TYYPE=INLINE
+            - TRANSFER_TYYPE=INLINE
         depends_on: 
             - recog
 
@@ -56,6 +61,6 @@ services:
             - -sp=50051
             - -zipkin=http://zipkin:9411/api/v2/spans
         environment:
-            - TRANFER_TYYPE=INLINE
+            - TRANSFER_TYYPE=INLINE
         depends_on:
             - decoder

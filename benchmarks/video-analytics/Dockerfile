@@ -22,27 +22,30 @@
 
 FROM vhiveease/python-slim:latest as recogBuilder
 WORKDIR /py
-COPY ./benchmarks/video-analytics/requirements.txt ./
 RUN apt update && \
-    apt install git curl -y && \
-    pip3 install --no-cache-dir --user torch==1.9.0+cpu torchvision==0.10.0+cpu torchaudio==0.9.0 -f https://download.pytorch.org/whl/torch_stable.html && \
-    pip3 install --no-cache-dir --user -r requirements.txt
+    apt install git curl -y 
 COPY ./utils/tracing/python/tracing.py ./
 COPY ./utils/storage/python/storage.py ./
 COPY ./benchmarks/video-analytics/object_recognition/* ./
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2_grpc.py ./
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2.py ./
-RUN --mount=type=secret,id=GOPRIVATE_KEY git clone --depth 1 https://$(cat /run/secrets/GOPRIVATE_KEY)@github.com/ease-lab/vhive-xdt /xdt
 
-FROM vhiveease/python-slim:latest as recog
-COPY --from=recogBuilder /root/.local /root/.local
+FROM ubuntu:24.04 as recog
 COPY --from=recogBuilder /py /app
-COPY --from=recogBuilder /xdt/sdk/python/ /app
-COPY --from=recogBuilder /xdt/proto/downXDT/ /app
-COPY --from=recogBuilder /xdt/proto/crossXDT/ /app
 WORKDIR /app
+RUN apt-get -y update
+RUN apt-get -y install libb2-1
+RUN apt-get -y install ca-certificates
+COPY ./tools/pin/pin /pin
+RUN chmod +x -R /pin
+COPY ./tools/pythonNotModifed ./python
+RUN  ./python/bin/python3.11 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu 
+COPY ./benchmarks/video-analytics/requirements.txt ./
+RUN ./python/bin/python3.11 -m pip install -r requirements.txt
+RUN mkfifo /tmp/pinToolPipe
+
 ENV PATH=/root/.local/bin:$PATH
-ENTRYPOINT ["python3", "-u", "./recog.py"]
+ENTRYPOINT ["/pin/pin", "-t", "/pin/obj-intel64/champsim_tracer.so", "-o", "trace.champsim", "-t", "100000000", "-p", "1", "--" "/app/python/bin/python3.11", "-u", "./recog.py"]
 
 
 FROM vhiveease/python-slim:latest as decodeBuilder
@@ -59,16 +62,11 @@ COPY ./benchmarks/video-analytics/decoder/decode.py ./
 RUN mkdir frames
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2_grpc.py ./
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2.py ./
-RUN --mount=type=secret,id=GOPRIVATE_KEY git clone --depth 1 https://$(cat /run/secrets/GOPRIVATE_KEY)@github.com/ease-lab/vhive-xdt /xdt
 
 FROM vhiveease/python-slim:latest as decode
 RUN apt update && apt-get install ffmpeg libsm6 libxext6  -y
 COPY --from=decodeBuilder /root/.local /root/.local
 COPY --from=decodeBuilder /py /app
-COPY --from=decodeBuilder /xdt/sdk/python/ /app
-COPY --from=decodeBuilder /xdt/proto/downXDT/ /app
-COPY --from=decodeBuilder /xdt/proto/upXDT/ /app
-COPY --from=decodeBuilder /xdt/proto/crossXDT/ /app
 WORKDIR /app
 ENV PATH=/root/.local/bin:$PATH
 ENTRYPOINT ["python3", "-u", "./decode.py"]
@@ -87,9 +85,6 @@ COPY ./benchmarks/video-analytics/proto ./proto
 COPY ./utils/storage/go ../../utils/storage/go
 COPY ./utils/tracing/go ../../utils/tracing/go
 COPY ./utils/protobuf ../../utils/protobuf
-RUN --mount=type=secret,id=GOPRIVATE_KEY \
-    git config --global url."https://$(cat /run/secrets/GOPRIVATE_KEY)@github.com/ease-lab/vhive-xdt".insteadOf "https://github.com/ease-lab/vhive-xdt"
-RUN go env -w GOPRIVATE=github.com/ease-lab/vhive-xdt
 RUN go mod download && \
    CGO_ENABLED=0 GOOS=linux go build -v -o ./video_streaming/streaming-bin ./video_streaming
 

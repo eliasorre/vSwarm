@@ -8,7 +8,7 @@ for instructions on testing benchmarks locally with docker-compose see the [runn
 ### Running Benchmarks on Knative Clusters
 
 **You will need a vHive Knative cluster**. To set up a stock knative cluster see the vHive
-[stock knative setup guide](https://github.com/vhive-serverless/vhive/blob/main/docs/developers_guide.md#testing-stock-knative-setup-or-images)
+[stock knative setup guide](https://github.co m/vhive-serverless/vhive/blob/main/docs/developers_guide.md#testing-stock-knative-setup-or-images)
 for a default knative cluster, or consider using the 
 [vHive quickstart guide](https://github.com/vhive-serverless/vhive/blob/main/docs/quickstart_guide.md).
 
