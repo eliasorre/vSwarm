@@ -30,6 +30,7 @@ import torchvision.models as models
 
 import sys
 import os
+import time
 import pickle
 # adding python tracing and storage sources to the system path
 sys.path.insert(0, os.getcwd() + '/../proto/')
@@ -130,14 +131,16 @@ class ObjectRecognitionServicer(videoservice_pb2_grpc.ObjectRecognitionServicer)
         log.info("performing image recognition on frame")
         pipe_path = "/tmp/pinToolPipe"
         log.info("Starting pin")
-        with open(pipe_path, "w") as pipe:
-            pipe.write("start\n")
-        log.info("Stopped pin")
+        # print("Starting pin")
+        # with open(pipe_path, "w") as pipe:
+        #     pipe.write("start\n")
+        # time.sleep(2)
         classification = infer(preprocessImage(frame))
         log.info("object recogintion successful")
-        with open(pipe_path, "w") as pipe:
-            pipe.write("stop\n")
-        log.info("Stopped pin")
+        # with open(pipe_path, "w") as pipe:
+        #     pipe.write("stop\n")
+        # time.sleep(2)
+        # log.info("Stopped pin")
         return videoservice_pb2.RecogniseReply(classification=classification)
 
 def serve():

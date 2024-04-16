@@ -25,6 +25,7 @@ from __future__ import print_function
 import pickle
 import sys
 import os
+import time
 # adding python tracing and storage sources to the system path
 sys.path.insert(0, os.getcwd() + '/../proto/')
 sys.path.insert(0, os.getcwd() + '/../../../../utils/tracing/python')
@@ -74,7 +75,6 @@ def decode(bytes):
         for i in range(int(os.getenv('DecoderFrames', int(args.frames)))):
             success,image = vidcap.read()
             all_frames.append(cv2.imencode('.jpg', image)[1].tobytes())
-
     return all_frames
 
 
@@ -112,6 +112,11 @@ class VideoDecoderServicer(videoservice_pb2_grpc.VideoDecoderServicer):
         return videoservice_pb2.DecodeReply(classification=results)
 
     def processFrames(self, videoBytes):
+        pipe_path = "/tmp/pinToolPipe"
+        log.info("Starting pin")
+        with open(pipe_path, "w") as pipe:
+            pipe.write("start\n")
+        time.sleep(5)
         frames = decode(videoBytes)
         with tracing.Span("Recognise all frames"):
             all_result_futures = []
@@ -129,7 +134,10 @@ class VideoDecoderServicer(videoservice_pb2_grpc.VideoDecoderServicer):
             results = ""
             for result in all_result_futures:
                 results = results + result + ","
-
+            with open(pipe_path, "w") as pipe:
+                pipe.write("stop\n")
+            time.sleep(5)
+            log.info("Stopped pin")
             return results
 
     def Recognise(self, frame):
@@ -149,6 +157,7 @@ def serve():
         videoservice_pb2_grpc.add_VideoDecoderServicer_to_server(
             VideoDecoderServicer(transferType=transferType), server)
         server.add_insecure_port('[::]:'+args.sp)
+        print("Starting server")
         server.start()
         server.wait_for_termination()
     else:
@@ -156,5 +165,6 @@ def serve():
 
 
 if __name__ == '__main__':
+    print("Start main")
     log.basicConfig(level=log.INFO)
     serve()

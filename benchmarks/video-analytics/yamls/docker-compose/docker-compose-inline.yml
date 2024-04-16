@@ -25,10 +25,6 @@ version: "3.7"
 services:
     recog:
         image: vhiveease/video-analytics-recog
-        entrypoint: 
-         - tail
-         - -f 
-         - /dev/null
         #entrypoint: /bin/sh -c " /pin/pin -t /pin/tracer/obj-intel64/champsim_tracer.so -o trace.champsim -t 100000000 -p 1 -- /app/python/bin/python3.11 -u /app/recog.py -sp=5003 -zipkin=http://zipkin:9411/api/v2/spans"
         # command:
         #     - -sp=50053
@@ -39,11 +35,8 @@ services:
 
     decoder:
         image: vhiveease/video-analytics-decoder
-        command:
-            - -addr=recog:50053
-            - -sp=50052
-            - -frames=3
-            - -zipkin=http://zipkin:9411/api/v2/spans
+        volumes:
+            - /home/elias/Master/vSwarm/benchmarks/video-analytics/decoder/volume:/app/logs
         environment:
             - MAX_DECODER_SERVER_THREADS=10
             - CONCURRENT_RECOG=false

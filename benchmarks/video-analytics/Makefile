@@ -48,7 +48,7 @@ streaming-image: Dockerfile proto/videoservice_grpc.pb.go proto/videoservice.pb.
 	DOCKER_BUILDKIT=1 docker build \
 	-t vhiveease/video-analytics-streaming:latest \
 	--target streaming \
-	--secret id=GOPRIVATE_KEY \
+	--secret id="vhiveease" \
 	-f Dockerfile \
 	--no-cache \
 	$(ROOT)

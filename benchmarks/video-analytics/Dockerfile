@@ -36,26 +36,24 @@ WORKDIR /app
 RUN apt-get -y update
 RUN apt-get -y install libb2-1
 RUN apt-get -y install ca-certificates
-COPY ./tools/pin/pin /pin
-RUN chmod +x -R /pin
+COPY ./tools/pin/pin ./pin
 COPY ./tools/pythonNotModifed ./python
 RUN  ./python/bin/python3.11 -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu 
 COPY ./benchmarks/video-analytics/requirements.txt ./
 RUN ./python/bin/python3.11 -m pip install -r requirements.txt
+RUN ./python/bin/python3.11 -m pip install --upgrade six
 RUN mkfifo /tmp/pinToolPipe
+RUN chmod +x -R /app/pin/
 
 ENV PATH=/root/.local/bin:$PATH
-ENTRYPOINT ["/pin/pin", "-t", "/pin/obj-intel64/champsim_tracer.so", "-o", "trace.champsim", "-t", "100000000", "-p", "1", "--" "/app/python/bin/python3.11", "-u", "./recog.py"]
-
+COPY ./benchmarks/video-analytics/object_recognition/print_and_run_command.py ./
+RUN chmod +x /app/print_and_run_command.py
+ENTRYPOINT ["/app/python/bin/python3.11", "/app/recog.py", "-sp=50053", "-zipkin=http://zipkin:9411/api/v2/spans"]
+#"/app/print_and_run_command.py", "/app/pin/pin", "-t", "/app/pin/tracer/obj-intel64/champsim_tracer.so", "-p", "1", "--", "/app/python/bin/python3.11",  "/app/recog.py", "-sp=50053", "-zipkin=http://zipkin:9411/api/v2/spans"]
 
 FROM vhiveease/python-slim:latest as decodeBuilder
 WORKDIR /py
 COPY ./benchmarks/video-analytics/requirements.txt ./
-RUN apt update && \
-    apt-get install ffmpeg libsm6 libxext6 git curl -y && \
-    pip3 install --no-cache-dir --user ffmpeg-python && \
-    pip3 install --no-cache-dir --user opencv-python && \
-    pip3 install --no-cache-dir --user -r requirements.txt
 COPY ./utils/tracing/python/tracing.py ./
 COPY ./utils/storage/python/storage.py ./
 COPY ./benchmarks/video-analytics/decoder/decode.py ./
@@ -63,13 +61,30 @@ RUN mkdir frames
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2_grpc.py ./
 COPY ./benchmarks/video-analytics/proto/videoservice_pb2.py ./
 
-FROM vhiveease/python-slim:latest as decode
-RUN apt update && apt-get install ffmpeg libsm6 libxext6  -y
-COPY --from=decodeBuilder /root/.local /root/.local
+FROM ubuntu:24.04 as decode
 COPY --from=decodeBuilder /py /app
 WORKDIR /app
+
+RUN apt update && apt-get install ffmpeg libsm6 libxext6  -y
+RUN apt-get -y install libb2-1
+RUN apt-get -y install ca-certificates
+COPY ./tools/pin/pin ./pin
+COPY ./tools/pythonNotModifed ./python
+COPY ./benchmarks/video-analytics/requirements.txt ./
+RUN ./python/bin/python3.11 -m pip install ffmpeg-python
+RUN ./python/bin/python3.11 -m pip install opencv-python
+RUN ./python/bin/python3.11 -m pip install -r requirements.txt
+RUN ./python/bin/python3.11 -m pip install --upgrade six
+RUN mkfifo /tmp/pinToolPipe
+RUN chmod +x -R /app/pin/
+COPY ./benchmarks/video-analytics/run_process.py ./
+RUN chmod +x /app/run_process.py
+COPY ./benchmarks/video-analytics/decoder/entrypoint.sh /app/entrypoint.sh 
+RUN chmod +x /app/entrypoint.sh
 ENV PATH=/root/.local/bin:$PATH
-ENTRYPOINT ["python3", "-u", "./decode.py"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# ENTRYPOINT ["/bin/bash", "-c", "/app/pin/pin -t /app/pin/tracer/obj-intel64/champsim_tracer.so -o /app/champsim.trace -p 1 -t 100000000 -f 1 --sleep 2000 -- /app/python/bin/python3.11 -u ./decode.py -addr=recog:50053 -sp=50052 -frames=3 -zipkin=http://zipkin:9411/api/v2/spans"]
 
 
 
